@@ -1,7 +1,6 @@
 // ================= CONFIGURAÇÃO =================
 const INTERVALO = 300; // segundos
 const ultimaAtualizacaoEl = document.getElementById("ultimaAtualizacao");
-
 let LAT = -20.8113;
 let LON = -49.3758;
 let restante = INTERVALO;
@@ -12,6 +11,7 @@ const cidadeAtualEl = document.getElementById("cidadeAtual");
 const statusEl = document.getElementById("status");
 const detalheEl = document.getElementById("detalhe");
 const contadorEl = document.getElementById("contador");
+const alertaEl = document.getElementById("alerta");
 const mapaEl = document.getElementById("mapa");
 
 const cidadeInput = document.getElementById("cidade");
@@ -61,13 +61,14 @@ async function buscarCidade() {
     mostrarCidade(data.results[0].name);
     atualizarTudo();
   } catch (e) {
-    alert(e);
+    statusEl.innerText = "❌ " + e;
+    alertaEl.innerHTML = "";
   }
 }
 
 function usarGPS() {
   if (!navigator.geolocation) {
-    alert("Geolocalização não suportada");
+    statusEl.innerText = "❌ Geolocalização não suportada";
     return;
   }
 
@@ -86,7 +87,6 @@ function usarGPS() {
 
       if (r.ok) {
         const data = await r.json();
-
         if (data.results && data.results.length > 0) {
           nomeCidade = data.results[0].name;
         }
@@ -98,61 +98,61 @@ function usarGPS() {
     mostrarCidade(nomeCidade);
     atualizarTudo();
   }, () => {
-    alert("Permissão de localização negada");
+    statusEl.innerText = "❌ Permissão de localização negada";
   });
 }
 
 async function atualizarPrevisao() {
-  const r = await fetch(
-    `https://api.open-meteo.com/v1/forecast?latitude=${LAT}&longitude=${LON}&minutely_15=precipitation_probability,precipitation&timezone=America/Sao_Paulo`
-  );
+  try {
+    const r = await fetch(
+      `https://api.open-meteo.com/v1/forecast?latitude=${LAT}&longitude=${LON}&minutely_15=precipitation_probability,precipitation&timezone=America/Sao_Paulo`
+    );
 
-  const data = await r.json();
-  // Hora da última atualização vinda da API
-const tempoAPI = data.minutely_15.time[0];
+    if (!r.ok) throw "Erro na previsão";
 
-// Converte para Date respeitando o fuso retornado
-const dataAPI = new Date(tempoAPI);
+    const data = await r.json();
 
-// Formata para hora:minuto
-const horaFormatada = dataAPI.toLocaleTimeString("pt-BR", {
-  hour: "2-digit",
-  minute: "2-digit"
-});
+    const tempoAPI = data.minutely_15.time[0];
+    const dataAPI = new Date(tempoAPI);
+    const horaFormatada = dataAPI.toLocaleTimeString("pt-BR", {
+      hour: "2-digit",
+      minute: "2-digit"
+    });
+    ultimaAtualizacaoEl.innerText = `🕒 Última atualização: ${horaFormatada}`;
 
-ultimaAtualizacaoEl.innerText =
-  `🕒 Última atualização: ${horaFormatada}`;
+    const prob = Math.max(...data.minutely_15.precipitation_probability.slice(0, 4));
+    const chuva = Math.max(...data.minutely_15.precipitation.slice(0, 4));
 
-  const prob = Math.max(...data.minutely_15.precipitation_probability.slice(0, 4));
-  const chuva = Math.max(...data.minutely_15.precipitation.slice(0, 4));
+    statusEl.innerText = definirStatus(prob, chuva);
+    detalheEl.innerHTML = `
+      Probabilidade máx.: <b>${prob}%</b><br>
+      Precipitação: <b>${chuva.toFixed(2)} mm</b>
+    `;
 
-dispararAlerta(prob, chuva);
-if (prob < 20 && chuva === 0) {
-  alertaDisparado = false;
-}
+    atualizarMapa();
+    dispararAlerta(prob, chuva);
 
-  statusEl.innerText = definirStatus(prob, chuva);
-  detalheEl.innerHTML = `
-    Probabilidade máx.: <b>${prob}%</b><br>
-    Precipitação: <b>${chuva.toFixed(2)} mm</b>
-  `;
+    if (prob < 20 && chuva === 0) {
+      alertaDisparado = false;
+      alertaEl.innerHTML = "";
+    }
 
-  restante = INTERVALO;
+    restante = INTERVALO;
+  } catch (e) {
+    statusEl.innerText = "❌ Erro ao atualizar previsão";
+    alertaEl.innerHTML = "";
+  }
 }
 
 function atualizarContador() {
   const m = Math.floor(restante / 60);
   const s = restante % 60;
-
-  contadorEl.innerText =
-    `🔄 Próxima atualização em ${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
-
+  contadorEl.innerText = `🔄 Próxima atualização em ${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
   if (restante > 0) restante--;
 }
 
 function atualizarTudo() {
   atualizarPrevisao();
-  atualizarMapa();
 }
 
 function dispararAlerta(prob, chuva) {
@@ -160,16 +160,15 @@ function dispararAlerta(prob, chuva) {
 
   if (prob >= 40 || chuva > 0.5) {
     alertaDisparado = true;
-
-    alert(
-      `⛈️ ALERTA DE CHUVA!\n\nProbabilidade: ${prob}%\nPrecipitação: ${chuva.toFixed(2)} mm`
-    );
+    alertaEl.innerHTML = `<div class="alerta">⛈️ ALERTA DE CHUVA! Prob.: ${prob}% | Precip.: ${chuva.toFixed(2)} mm</div>`;
   }
 }
 
 // ================= INICIALIZAÇÃO =================
 mostrarCidade("São José do Rio Preto");
 atualizarTudo();
+atualizarContador();
 
+// Atualizações automáticas
 setInterval(atualizarPrevisao, INTERVALO * 1000);
 setInterval(atualizarContador, 1000);
