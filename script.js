@@ -1,5 +1,6 @@
 // ================= CONFIGURAÇÃO =================
 const INTERVALO = 300; // segundos
+const ultimaAtualizacaoEl = document.getElementById("ultimaAtualizacao");
 
 let LAT = -20.8113;
 let LON = -49.3758;
@@ -107,6 +108,20 @@ async function atualizarPrevisao() {
   );
 
   const data = await r.json();
+  // Hora da última atualização vinda da API
+const tempoAPI = data.minutely_15.time[0];
+
+// Converte para Date respeitando o fuso retornado
+const dataAPI = new Date(tempoAPI);
+
+// Formata para hora:minuto
+const horaFormatada = dataAPI.toLocaleTimeString("pt-BR", {
+  hour: "2-digit",
+  minute: "2-digit"
+});
+
+ultimaAtualizacaoEl.innerText =
+  `🕒 Última atualização: ${horaFormatada}`;
 
   const prob = Math.max(...data.minutely_15.precipitation_probability.slice(0, 4));
   const chuva = Math.max(...data.minutely_15.precipitation.slice(0, 4));
