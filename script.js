@@ -4,6 +4,7 @@ const INTERVALO = 300; // segundos
 let LAT = -20.8113;
 let LON = -49.3758;
 let restante = INTERVALO;
+let alertaDisparado = false;
 
 // ================= ELEMENTOS =================
 const cidadeAtualEl = document.getElementById("cidadeAtual");
@@ -100,6 +101,11 @@ async function atualizarPrevisao() {
   const prob = Math.max(...data.minutely_15.precipitation_probability.slice(0, 4));
   const chuva = Math.max(...data.minutely_15.precipitation.slice(0, 4));
 
+dispararAlerta(prob, chuva);
+if (prob < 20 && chuva === 0) {
+  alertaDisparado = false;
+}
+
   statusEl.innerText = definirStatus(prob, chuva);
   detalheEl.innerHTML = `
     Probabilidade máx.: <b>${prob}%</b><br>
@@ -122,6 +128,18 @@ function atualizarContador() {
 function atualizarTudo() {
   atualizarPrevisao();
   atualizarMapa();
+}
+
+function dispararAlerta(prob, chuva) {
+  if (alertaDisparado) return;
+
+  if (prob >= 40 || chuva > 0.5) {
+    alertaDisparado = true;
+
+    alert(
+      `⛈️ ALERTA DE CHUVA!\n\nProbabilidade: ${prob}%\nPrecipitação: ${chuva.toFixed(2)} mm`
+    );
+  }
 }
 
 // ================= INICIALIZAÇÃO =================
