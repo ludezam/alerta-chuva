@@ -1,174 +1,182 @@
-// ================= CONFIGURAÇÃO =================
-const INTERVALO = 300; // segundos
-const ultimaAtualizacaoEl = document.getElementById("ultimaAtualizacao");
-let LAT = -20.8113;
-let LON = -49.3758;
-let restante = INTERVALO;
-let alertaDisparado = false;
+document.addEventListener("DOMContentLoaded", () => {
 
-// ================= ELEMENTOS =================
-const cidadeAtualEl = document.getElementById("cidadeAtual");
-const statusEl = document.getElementById("status");
-const detalheEl = document.getElementById("detalhe");
-const contadorEl = document.getElementById("contador");
-const alertaEl = document.getElementById("alerta");
-const mapaEl = document.getElementById("mapa");
+  // ================= CONFIGURAÇÃO =================
+  const INTERVALO = 300; // segundos
+  let LAT = -20.8113;
+  let LON = -49.3758;
+  let restante = INTERVALO;
+  let alertaDisparado = false;
 
-const cidadeInput = document.getElementById("cidade");
-const btnBuscar = document.getElementById("btnBuscar");
-const btnGPS = document.getElementById("btnGPS");
+  // ================= ELEMENTOS =================
+  const cidadeAtualEl = document.getElementById("cidadeAtual");
+  const statusEl = document.getElementById("status");
+  const detalheEl = document.getElementById("detalhe");
+  const alertaEl = document.getElementById("alerta");
+  const contadorEl = document.getElementById("contador");
+  const ultimaAtualizacaoEl = document.getElementById("ultimaAtualizacao");
+  const mapaEl = document.getElementById("mapa");
 
-// ================= EVENTOS =================
-btnBuscar.addEventListener("click", buscarCidade);
-btnGPS.addEventListener("click", usarGPS);
+  const cidadeInput = document.getElementById("cidade");
+  const btnBuscar = document.getElementById("btnBuscar");
+  const btnGPS = document.getElementById("btnGPS");
 
-// ================= FUNÇÕES =================
-function mostrarCidade(nome) {
-  cidadeAtualEl.innerHTML = `📍 Cidade: <b>${nome}</b>`;
-}
+  // ================= EVENTOS =================
+  btnBuscar.addEventListener("click", buscarCidade);
+  btnGPS.addEventListener("click", usarGPS);
 
-function atualizarMapa() {
-  const src = `https://embed.rainviewer.com/?loc=${LAT},${LON},7&layer=radar&smooth=1&snow=0&_=${Date.now()}`;
-  mapaEl.src = src;
-}
-
-function definirStatus(prob, chuva) {
-  if (chuva > 0.5) return "🔴 Chuva forte ⛈️";
-  if (prob >= 40) return "🟠 Chuva se aproximando";
-  if (prob >= 20) return "🟡 Chuva possível";
-  return "🟢 Sem chuva";
-}
-
-async function buscarCidade() {
-  try {
-    const nome = cidadeInput.value.trim();
-    if (!nome) throw "Digite a cidade";
-
-    statusEl.innerText = "⏳ Buscando cidade...";
-
-    const r = await fetch(
-      `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(nome)}&count=1&language=pt`
-    );
-
-    if (!r.ok) throw "Erro ao buscar cidade";
-
-    const data = await r.json();
-    if (!data.results) throw "Cidade não encontrada";
-
-    LAT = data.results[0].latitude;
-    LON = data.results[0].longitude;
-
-    mostrarCidade(data.results[0].name);
-    atualizarTudo();
-  } catch (e) {
-    statusEl.innerText = "❌ " + e;
-    alertaEl.innerHTML = "";
-  }
-}
-
-function usarGPS() {
-  if (!navigator.geolocation) {
-    statusEl.innerText = "❌ Geolocalização não suportada";
-    return;
+  // ================= FUNÇÕES =================
+  function mostrarCidade(nome) {
+    cidadeAtualEl.innerHTML = `📍 Cidade: <b>${nome}</b>`;
   }
 
-  statusEl.innerText = "📍 Obtendo localização...";
+  function atualizarMapa() {
+    const src = `https://embed.rainviewer.com/?loc=${LAT},${LON},7&layer=radar&smooth=1&snow=0&_=${Date.now()}`;
+    mapaEl.src = src;
+  }
 
-  navigator.geolocation.getCurrentPosition(async pos => {
-    LAT = pos.coords.latitude;
-    LON = pos.coords.longitude;
+  function definirStatus(prob, chuva) {
+    if (chuva > 0.5) return "🔴 Chuva forte ⛈️";
+    if (prob >= 40) return "🟠 Chuva se aproximando";
+    if (prob >= 20) return "🟡 Chuva possível";
+    return "🟢 Sem chuva";
+  }
 
-    let nomeCidade = "Local atual";
-
+  async function buscarCidade() {
     try {
+      const nome = cidadeInput.value.trim();
+      if (!nome) throw "Digite a cidade";
+
+      statusEl.innerText = "⏳ Buscando cidade...";
+      alertaEl.innerHTML = "";
+
       const r = await fetch(
-        `https://geocoding-api.open-meteo.com/v1/reverse?latitude=${LAT}&longitude=${LON}&language=pt`
+        `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(nome)}&count=1&language=pt`
       );
 
-      if (r.ok) {
-        const data = await r.json();
-        if (data.results && data.results.length > 0) {
-          nomeCidade = data.results[0].name;
-        }
-      }
+      if (!r.ok) throw "Erro ao buscar cidade";
+
+      const data = await r.json();
+      if (!data.results) throw "Cidade não encontrada";
+
+      LAT = data.results[0].latitude;
+      LON = data.results[0].longitude;
+
+      mostrarCidade(data.results[0].name);
+      atualizarTudo();
     } catch (e) {
-      // silencioso
-    }
-
-    mostrarCidade(nomeCidade);
-    atualizarTudo();
-  }, () => {
-    statusEl.innerText = "❌ Permissão de localização negada";
-  });
-}
-
-async function atualizarPrevisao() {
-  try {
-    const r = await fetch(
-      `https://api.open-meteo.com/v1/forecast?latitude=${LAT}&longitude=${LON}&minutely_15=precipitation_probability,precipitation&timezone=America/Sao_Paulo`
-    );
-
-    if (!r.ok) throw "Erro na previsão";
-
-    const data = await r.json();
-
-    const tempoAPI = data.minutely_15.time[0];
-    const dataAPI = new Date(tempoAPI);
-    const horaFormatada = dataAPI.toLocaleTimeString("pt-BR", {
-      hour: "2-digit",
-      minute: "2-digit"
-    });
-    ultimaAtualizacaoEl.innerText = `🕒 Última atualização: ${horaFormatada}`;
-
-    const prob = Math.max(...data.minutely_15.precipitation_probability.slice(0, 4));
-    const chuva = Math.max(...data.minutely_15.precipitation.slice(0, 4));
-
-    statusEl.innerText = definirStatus(prob, chuva);
-    detalheEl.innerHTML = `
-      Probabilidade máx.: <b>${prob}%</b><br>
-      Precipitação: <b>${chuva.toFixed(2)} mm</b>
-    `;
-
-    atualizarMapa();
-    dispararAlerta(prob, chuva);
-
-    if (prob < 20 && chuva === 0) {
-      alertaDisparado = false;
+      statusEl.innerText = "❌ " + e;
       alertaEl.innerHTML = "";
     }
+  }
 
-    restante = INTERVALO;
-  } catch (e) {
-    statusEl.innerText = "❌ Erro ao atualizar previsão";
+  function usarGPS() {
+    if (!navigator.geolocation) {
+      statusEl.innerText = "❌ Geolocalização não suportada";
+      return;
+    }
+
+    statusEl.innerText = "📍 Obtendo localização...";
     alertaEl.innerHTML = "";
+
+    navigator.geolocation.getCurrentPosition(async pos => {
+      LAT = pos.coords.latitude;
+      LON = pos.coords.longitude;
+
+      let nomeCidade = "Local atual";
+
+      try {
+        const r = await fetch(
+          `https://geocoding-api.open-meteo.com/v1/reverse?latitude=${LAT}&longitude=${LON}&language=pt`
+        );
+
+        if (r.ok) {
+          const data = await r.json();
+          if (data.results && data.results.length > 0) {
+            nomeCidade = data.results[0].name;
+          }
+        }
+      } catch (e) {
+        // silencioso
+      }
+
+      mostrarCidade(nomeCidade);
+      atualizarTudo();
+    }, () => {
+      statusEl.innerText = "❌ Permissão de localização negada";
+    });
   }
-}
 
-function atualizarContador() {
-  const m = Math.floor(restante / 60);
-  const s = restante % 60;
-  contadorEl.innerText = `🔄 Próxima atualização em ${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
-  if (restante > 0) restante--;
-}
+  async function atualizarPrevisao() {
+    try {
+      const r = await fetch(
+        `https://api.open-meteo.com/v1/forecast?latitude=${LAT}&longitude=${LON}&hourly=precipitation_probability,precipitation&timezone=America/Sao_Paulo`
+      );
 
-function atualizarTudo() {
-  atualizarPrevisao();
-}
+      if (!r.ok) throw "Erro na previsão";
 
-function dispararAlerta(prob, chuva) {
-  if (alertaDisparado) return;
+      const data = await r.json();
 
-  if (prob >= 40 || chuva > 0.5) {
-    alertaDisparado = true;
-    alertaEl.innerHTML = `<div class="alerta">⛈️ ALERTA DE CHUVA! Prob.: ${prob}% | Precip.: ${chuva.toFixed(2)} mm</div>`;
+      // Próximos 4 horários
+      const prob = Math.max(...data.hourly.precipitation_probability.slice(0, 4));
+      const chuva = Math.max(...data.hourly.precipitation.slice(0, 4));
+
+      statusEl.innerText = definirStatus(prob, chuva);
+      detalheEl.innerHTML = `
+        Probabilidade máx.: <b>${prob}%</b><br>
+        Precipitação: <b>${chuva.toFixed(2)} mm</b>
+      `;
+
+      atualizarMapa();
+      dispararAlerta(prob, chuva);
+
+      if (prob < 20 && chuva === 0) {
+        alertaDisparado = false;
+        alertaEl.innerHTML = "";
+      }
+
+      const ultimoHorario = data.hourly.time[0];
+      const dataAPI = new Date(ultimoHorario);
+      const horaFormatada = dataAPI.toLocaleTimeString("pt-BR", {
+        hour: "2-digit",
+        minute: "2-digit"
+      });
+      ultimaAtualizacaoEl.innerText = `🕒 Última atualização: ${horaFormatada}`;
+
+      restante = INTERVALO;
+
+    } catch (e) {
+      statusEl.innerText = "❌ Erro ao atualizar previsão";
+      alertaEl.innerHTML = "";
+      console.error("Erro atualizarPrevisao:", e);
+    }
   }
-}
 
-// ================= INICIALIZAÇÃO =================
-mostrarCidade("São José do Rio Preto");
-atualizarTudo();
-atualizarContador();
+  function atualizarContador() {
+    const m = Math.floor(restante / 60);
+    const s = restante % 60;
+    contadorEl.innerText = `🔄 Próxima atualização em ${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+    if (restante > 0) restante--;
+  }
 
-// Atualizações automáticas
-setInterval(atualizarPrevisao, INTERVALO * 1000);
-setInterval(atualizarContador, 1000);
+  function atualizarTudo() {
+    atualizarPrevisao();
+  }
+
+  function dispararAlerta(prob, chuva) {
+    if (alertaDisparado) return;
+
+    if (prob >= 40 || chuva > 0.5) {
+      alertaDisparado = true;
+      alertaEl.innerHTML = `<div class="alerta">⛈️ ALERTA DE CHUVA! Prob.: ${prob}% | Precip.: ${chuva.toFixed(2)} mm</div>`;
+    }
+  }
+
+  // ================= INICIALIZAÇÃO =================
+  mostrarCidade("São José do Rio Preto");
+  atualizarTudo();
+  atualizarContador();
+
+  setInterval(atualizarPrevisao, INTERVALO * 1000);
+  setInterval(atualizarContador, 1000);
+
+});
