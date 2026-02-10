@@ -186,9 +186,13 @@ document.addEventListener("click", () => {
   }
 });
 
-if (precipitacao > 0) {
+if (chuva > 0) {
   document.getElementById("alertSound").play();
 }
+
+document.getElementById("btnRefresh").addEventListener("click", () => {
+  window.location.reload();
+});
 
   // ================= INICIALIZAÇÃO =================
   mostrarCidade("S J Rio Preto");
