@@ -30,7 +30,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function atualizarMapa() {
-    const src = `https://embed.rainviewer.com/?loc=${LAT},${LON},7&layer=radar&smooth=1&snow=0&_=${Date.now()}`;
+    const src = `https://rainviewer.com/?loc=${LAT},${LON},7&layer=radar&smooth=1&snow=0&_=${Date.now()}`;
     mapaEl.src = src;
   }
 
@@ -134,11 +134,11 @@ document.addEventListener("DOMContentLoaded", () => {
         alertaEl.innerHTML = "";
       }
 
-    const agora = new Date();
+      const agora = new Date();
 
-    const horaFormatada = agora.toLocaleTimeString("pt-BR", {
-        hour: "2-digit",
-        minute: "2-digit"
+      const horaFormatada = agora.toLocaleTimeString("pt-BR", {
+  hour: "2-digit",
+  minute: "2-digit"
     });
 
     ultimaAtualizacaoEl.innerText = `🕒 Última atualização: ${horaFormatada}`;
@@ -171,7 +171,7 @@ document.addEventListener("DOMContentLoaded", () => {
       alertaEl.innerHTML = `<div class="alerta">⛈️ ALERTA DE CHUVA! Prob.: ${prob}% | Precip.: ${chuva.toFixed(2)} mm</div>`;
     }
   }
-  
+
 let audioLiberado = false;
 
 document.addEventListener("click", () => {
@@ -186,7 +186,7 @@ document.addEventListener("click", () => {
   }
 });
 
-if (${chuva.toFixed(2)} > 0) {
+if (precipitacao > 0) {
   document.getElementById("alertSound").play();
 }
 
