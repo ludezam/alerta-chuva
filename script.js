@@ -186,12 +186,12 @@ document.addEventListener("click", () => {
   }
 });
 
-if (precipitacao > 0) {
+if (${chuva.toFixed(2)} > 0) {
   document.getElementById("alertSound").play();
 }
 
   // ================= INICIALIZAÇÃO =================
-  mostrarCidade("São José do Rio Preto");
+  mostrarCidade("S J Rio Preto");
   atualizarTudo();
   atualizarContador();
 
