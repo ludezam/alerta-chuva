@@ -171,6 +171,24 @@ document.addEventListener("DOMContentLoaded", () => {
       alertaEl.innerHTML = `<div class="alerta">⛈️ ALERTA DE CHUVA! Prob.: ${prob}% | Precip.: ${chuva.toFixed(2)} mm</div>`;
     }
   }
+  
+let audioLiberado = false;
+
+document.addEventListener("click", () => {
+  if (!audioLiberado) {
+    const audio = document.getElementById("alertSound");
+    audio.play().then(() => {
+      audio.pause();
+      audio.currentTime = 0;
+      audioLiberado = true;
+      console.log("🔓 Som liberado");
+    }).catch(() => {});
+  }
+});
+
+if (precipitacao > 0) {
+  document.getElementById("alertSound").play();
+}
 
   // ================= INICIALIZAÇÃO =================
   mostrarCidade("São José do Rio Preto");
