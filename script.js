@@ -79,6 +79,7 @@ document.addEventListener("DOMContentLoaded", () => {
       LON = data.results[0].longitude;
 
       mostrarCidade(data.results[0].name);
+      atualizarMapa();
       atualizarTudo();
     } catch (e) {
       statusEl.innerText = "❌ " + e;
@@ -115,6 +116,7 @@ document.addEventListener("DOMContentLoaded", () => {
       } catch {}
 
       mostrarCidade(nomeCidade);
+      atualizarMapa();
       atualizarTudo();
     }, () => {
       statusEl.innerText = "❌ Permissão de localização negada";
