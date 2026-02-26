@@ -4,6 +4,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const INTERVALO = 300; // segundos
   let LAT = -20.8113;
   let LON = -49.3758;
+  let nomeCidadeAtual = "São José do Rio Preto-SP";
   let restante = INTERVALO;
   let alertaDisparado = false;
 
@@ -45,6 +46,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // ================= FUNÇÕES =================
   function mostrarCidade(nome) {
+    nomeCidadeAtual = nome;
     cidadeAtualEl.innerHTML = `📍 Cidade: <b>${nome}</b>`;
   }
 
@@ -57,6 +59,26 @@ document.addEventListener("DOMContentLoaded", () => {
     if (mapaLegendaEl) {
       mapaLegendaEl.innerText = `Mapa de ${nomeCidade}`;
     }
+  }
+
+  async function obterNomeCidadePorCoordenadas(latitude, longitude) {
+    const r = await fetch(
+      `https://geocoding-api.open-meteo.com/v1/reverse?latitude=${latitude}&longitude=${longitude}&language=pt`
+    );
+
+    if (!r.ok) {
+      throw new Error("Falha ao obter cidade");
+    }
+
+    const data = await r.json();
+    const resultado = data.results?.[0];
+
+    if (!resultado?.name) {
+      throw new Error("Cidade não encontrada para as coordenadas");
+    }
+
+    const estado = resultado.admin1 ? `-${resultado.admin1}` : "";
+    return `${resultado.name}${estado}`;
   }
 
   function definirStatus(prob, chuva) {
@@ -128,20 +150,13 @@ document.addEventListener("DOMContentLoaded", () => {
       LAT = pos.coords.latitude;
       LON = pos.coords.longitude;
 
-      let nomeCidade = "Local atual";
+      let nomeCidade = nomeCidadeAtual;
 
       try {
-        const r = await fetch(
-          `https://geocoding-api.open-meteo.com/v1/reverse?latitude=${LAT}&longitude=${LON}&language=pt`
-        );
-
-        if (r.ok) {
-          const data = await r.json();
-          if (data.results && data.results.length > 0) {
-            nomeCidade = data.results[0].name;
-          }
-        }
-      } catch {}
+        nomeCidade = await obterNomeCidadePorCoordenadas(LAT, LON);
+      } catch (erro) {
+        console.error("Erro ao resolver cidade da localização:", erro);
+      }
 
       mostrarCidade(nomeCidade);
       atualizarMapa(nomeCidade);
