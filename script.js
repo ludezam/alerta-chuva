@@ -14,6 +14,8 @@ document.addEventListener("DOMContentLoaded", () => {
   const alertaEl = document.getElementById("alerta");
   const contadorEl = document.getElementById("contador");
   const ultimaAtualizacaoEl = document.getElementById("ultimaAtualizacao");
+  const mapaRadarEl = document.getElementById("mapaRadar");
+  const mapaLegendaEl = document.getElementById("mapaLegenda");
 
   const cidadeInput = document.getElementById("cidade");
   const btnBuscar = document.getElementById("btnBuscar");
@@ -44,6 +46,17 @@ document.addEventListener("DOMContentLoaded", () => {
   // ================= FUNÇÕES =================
   function mostrarCidade(nome) {
     cidadeAtualEl.innerHTML = `📍 Cidade: <b>${nome}</b>`;
+  }
+
+  function atualizarMapa(nomeCidade = "Local atual") {
+    if (!mapaRadarEl) return;
+
+    mapaRadarEl.src = `https://www.rainviewer.com/map.html?loc=${LAT},${LON},10&oCS=1&c=3&o=83&lm=1&layer=radar&sm=1&sn=1`;
+    mapaRadarEl.title = `Mapa radar de ${nomeCidade}`;
+
+    if (mapaLegendaEl) {
+      mapaLegendaEl.innerText = `Mapa de ${nomeCidade}`;
+    }
   }
 
   function definirStatus(prob, chuva) {
@@ -92,7 +105,9 @@ document.addEventListener("DOMContentLoaded", () => {
       LAT = data.results[0].latitude;
       LON = data.results[0].longitude;
 
-      mostrarCidade(data.results[0].name);
+      const nomeCidade = data.results[0].name;
+      mostrarCidade(nomeCidade);
+      atualizarMapa(nomeCidade);
       atualizarTudo();
     } catch (e) {
       statusEl.innerText = "❌ " + e;
@@ -129,6 +144,7 @@ document.addEventListener("DOMContentLoaded", () => {
       } catch {}
 
       mostrarCidade(nomeCidade);
+      atualizarMapa(nomeCidade);
       atualizarTudo();
     }, () => {
       statusEl.innerText = "❌ Permissão de localização negada";
@@ -206,6 +222,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // ================= INICIALIZAÇÃO =================
   mostrarCidade("Catanduva-SP");
+  atualizarMapa("Catanduva-SP");
   atualizarTudo();
   atualizarContador();
 
