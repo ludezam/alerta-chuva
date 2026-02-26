@@ -2,8 +2,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // ================= CONFIGURAÇÃO =================
   const INTERVALO = 300; // segundos
-  let LAT = -21.1378;
-  let LON = -48.9728;
+  let LAT = -20.8113;
+  let LON = -49.3758;
   let restante = INTERVALO;
   let alertaDisparado = false;
 
@@ -14,7 +14,6 @@ document.addEventListener("DOMContentLoaded", () => {
   const alertaEl = document.getElementById("alerta");
   const contadorEl = document.getElementById("contador");
   const ultimaAtualizacaoEl = document.getElementById("ultimaAtualizacao");
-  const mapaEl = document.getElementById("mapa");
 
   const cidadeInput = document.getElementById("cidade");
   const btnBuscar = document.getElementById("btnBuscar");
@@ -28,34 +27,49 @@ document.addEventListener("DOMContentLoaded", () => {
   btnRefresh.addEventListener("click", () => window.location.reload());
 
   // ================= AUDIO =================
-  let audioLiberado = false;
+  // Função de alerta sonoro desativada temporariamente, sem remover o código.
+  // let audioLiberado = false;
 
-  document.addEventListener("click", () => {
-    if (!audioLiberado && audio) {
-      audio.play().then(() => {
-        audio.pause();
-        audio.currentTime = 0;
-        audioLiberado = true;
-        console.log("🔓 Som liberado");
-      }).catch(() => {});
-    }
-  }, { once: true });
+  // document.addEventListener("click", () => {
+  //   if (!audioLiberado && audio) {
+  //     audio.play().then(() => {
+  //       audio.pause();
+  //       audio.currentTime = 0;
+  //       audioLiberado = true;
+  //       console.log("🔓 Som liberado");
+  //     }).catch(() => {});
+  //   }
+  // }, { once: true });
 
   // ================= FUNÇÕES =================
   function mostrarCidade(nome) {
     cidadeAtualEl.innerHTML = `📍 Cidade: <b>${nome}</b>`;
   }
 
-  function atualizarMapa() {
-    const src = `https://rainviewer.com/?loc=${LAT},${LON},7&layer=radar&smooth=1&snow=0&_=${Date.now()}`;
-    mapaEl.src = src;
-  }
-
   function definirStatus(prob, chuva) {
     if (chuva > 0.5) return "🔴 Chuva forte ⛈️";
-    if (prob >= 40) return "🟠 Chuva se aproximando ☁️";
-    if (prob >= 20) return "🟡 Chuva possível ☔️";
+    if (prob >= 40) return "🟠 Chuva se aproximando";
+    if (prob >= 20) return "🟡 Chuva possível";
     return "🟢 Sem chuva";
+  }
+
+  function renderizarAlerta(prob, chuva, temperatura, vento) {
+    const alertaAtivo = prob >= 40 || chuva > 0.5;
+
+    const blocoAlerta = alertaAtivo
+      ? `
+        <div class="alerta">
+          ⛈️ ALERTA DE CHUVA!<br>
+          Prob.: ${prob}% | Precip.: ${chuva.toFixed(2)} mm
+        </div>
+      `
+      : '<div class="sem-alerta">✅ Sem alerta de chuva no momento.</div>';
+
+    alertaEl.innerHTML = `
+      ${blocoAlerta}
+      <div class="info-clima">🌡️ Temperatura: <b>${temperatura.toFixed(1)}°C</b></div>
+      <div class="info-clima">💨 Vento: <b>${vento.toFixed(1)} km/h</b></div>
+    `;
   }
 
   async function buscarCidade() {
@@ -124,7 +138,7 @@ document.addEventListener("DOMContentLoaded", () => {
   async function atualizarPrevisao() {
     try {
       const r = await fetch(
-        `https://api.open-meteo.com/v1/forecast?latitude=${LAT}&longitude=${LON}&hourly=precipitation_probability,precipitation&timezone=America/Sao_Paulo`
+        `https://api.open-meteo.com/v1/forecast?latitude=${LAT}&longitude=${LON}&hourly=precipitation_probability,precipitation,temperature_2m,wind_speed_10m&timezone=America/Sao_Paulo`
       );
 
       if (!r.ok) throw "Erro na previsão";
@@ -133,6 +147,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
       const prob = Math.max(...data.hourly.precipitation_probability.slice(0, 4));
       const chuva = Math.max(...data.hourly.precipitation.slice(0, 4));
+      const temperatura = data.hourly.temperature_2m[0];
+      const vento = data.hourly.wind_speed_10m[0];
 
       statusEl.innerText = definirStatus(prob, chuva);
       detalheEl.innerHTML = `
@@ -140,12 +156,11 @@ document.addEventListener("DOMContentLoaded", () => {
         Precipitação: <b>${chuva.toFixed(2)} mm</b>
       `;
 
-      atualizarMapa();
       dispararAlerta(prob, chuva);
+      renderizarAlerta(prob, chuva, temperatura, vento);
 
       if (prob < 20 && chuva === 0) {
         alertaDisparado = false;
-        alertaEl.innerHTML = "";
       }
 
       const agora = new Date();
@@ -170,17 +185,10 @@ document.addEventListener("DOMContentLoaded", () => {
     if (prob >= 40 || chuva > 0.5) {
       alertaDisparado = true;
 
-      alertaEl.innerHTML = `
-        <div class="alerta">
-          ⛈️ ALERTA DE CHUVA!<br>
-          Prob.: ${prob}% | Precip.: ${chuva.toFixed(2)} mm
-        </div>
-      `;
-
-      if (audioLiberado && audio) {
-        audio.currentTime = 0;
-        audio.play().catch(() => {});
-      }
+      // if (audioLiberado && audio) {
+      //   audio.currentTime = 0;
+      //   audio.play().catch(() => {});
+      // }
     }
   }
 
@@ -197,7 +205,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   // ================= INICIALIZAÇÃO =================
-  mostrarCidade("Catanduva");
+  mostrarCidade("S J Rio Preto");
   atualizarTudo();
   atualizarContador();
 
