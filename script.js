@@ -154,10 +154,10 @@ document.addEventListener("DOMContentLoaded", () => {
     return `${Math.round(direcao)}°`;
   }
 
-  function obterChaveHoraAtualSaoPaulo() {
+  function obterChaveHoraAtual(timeZone = "America/Sao_Paulo") {
     const agora = new Date();
     const partes = new Intl.DateTimeFormat("sv-SE", {
-      timeZone: "America/Sao_Paulo",
+      timeZone,
       year: "numeric",
       month: "2-digit",
       day: "2-digit",
@@ -169,10 +169,10 @@ document.addEventListener("DOMContentLoaded", () => {
     return `${mapa.year}-${mapa.month}-${mapa.day}T${mapa.hour}:00`;
   }
 
-  function renderizarPrevisao12h(hourly) {
+  function renderizarPrevisao12h(hourly, timeZone) {
     if (!previsao12hEl || !hourly?.time) return;
 
-    const chaveHoraAtual = obterChaveHoraAtualSaoPaulo();
+    const chaveHoraAtual = obterChaveHoraAtual(timeZone);
     const indiceInicial = Math.max(hourly.time.findIndex(time => time >= chaveHoraAtual), 0);
 
     const proximas12 = hourly.time.slice(indiceInicial, indiceInicial + 12).map((time, i) => ({
@@ -252,8 +252,14 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function usarGPS() {
+    carregarLocalizacaoAtual({ mostrarErro: true });
+  }
+
+  function carregarLocalizacaoAtual({ mostrarErro = false } = {}) {
     if (!navigator.geolocation) {
-      statusEl.innerText = "❌ Geolocalização não suportada";
+      if (mostrarErro) {
+        statusEl.innerText = "❌ Geolocalização não suportada";
+      }
       return;
     }
 
@@ -264,7 +270,7 @@ document.addEventListener("DOMContentLoaded", () => {
       LAT = pos.coords.latitude;
       LON = pos.coords.longitude;
 
-      let nomeCidade = nomeCidadeAtual;
+      let nomeCidade = "Local atual";
 
       try {
         nomeCidade = await obterNomeCidadePorCoordenadas(LAT, LON);
@@ -275,21 +281,28 @@ document.addEventListener("DOMContentLoaded", () => {
       mostrarCidade(nomeCidade);
       atualizarMapa(nomeCidade);
       atualizarTudo();
-    }, () => {
-      statusEl.innerText = "❌ Permissão de localização negada";
+    }, erro => {
+      console.warn("Não foi possível obter a localização automaticamente:", erro);
+      if (mostrarErro) {
+        statusEl.innerText = "❌ Permissão de localização negada";
+      }
+    }, {
+      enableHighAccuracy: false,
+      maximumAge: 10 * 60 * 1000,
+      timeout: 10000
     });
   }
 
   async function atualizarPrevisao() {
     try {
       const r = await fetch(
-        `https://api.open-meteo.com/v1/forecast?latitude=${LAT}&longitude=${LON}&hourly=precipitation_probability,precipitation,temperature_2m,wind_speed_10m,wind_direction_10m&timezone=America/Sao_Paulo`
+        `https://api.open-meteo.com/v1/forecast?latitude=${LAT}&longitude=${LON}&hourly=precipitation_probability,precipitation,temperature_2m,wind_speed_10m,wind_direction_10m&timezone=auto`
       );
 
       if (!r.ok) throw "Erro na previsão";
 
       const data = await r.json();
-      renderizarPrevisao12h(data.hourly);
+      renderizarPrevisao12h(data.hourly, data.timezone);
 
       if (!EXIBIR_PAINEL_INFO) return;
 
@@ -353,10 +366,11 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   // ================= INICIALIZAÇÃO =================
-  mostrarCidade("São José do Rio Preto-SP");
+  mostrarCidade(nomeCidadeAtual);
   aplicarVisibilidadePainelInfo();
-  atualizarMapa("São José do Rio Preto-SP");
+  atualizarMapa(nomeCidadeAtual);
   atualizarTudo();
+  carregarLocalizacaoAtual();
   if (EXIBIR_PAINEL_INFO) {
     atualizarContador();
   }
