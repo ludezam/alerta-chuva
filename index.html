@@ -2,7 +2,7 @@
 <html lang="pt-br">
 <head>
   <meta charset="UTF-8">
-  <title>⛈️ Alerta de Chuva</title>
+  <title>⛈️ Mapa de Chuva</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
   <link rel="stylesheet" href="style.css">
@@ -10,7 +10,7 @@
 </head>
 <body>
 
-  <h1>🌧️ Alerta de Chuva </h1>
+  <h1>⛈️ Mapa de Chuva </h1>
 
   <div class="mapa-fixo-container">
     <small id="mapaLegenda">Mapa em tempo real, atualizado a cada 10min </small>
@@ -50,24 +50,9 @@
     <div class="previsao-scroll" id="previsao12h" role="list"></div>
   </section>
 
-  <div class="box">
-    <div id="cidadeAtual" class="cidade-atual">
-      📍 Cidade: <b>São José do Rio Preto-SP</b>
-    </div>
-    <div class="status" id="status">⏳ Carregando...</div>
-    <div id="detalhe"></div>
-    <div id="alerta"></div>
-    <!--  <div id="contador"></div> -->
-    <div id="ultimaAtualizacao"></div>
-  </div>
-
   <footer>
     <small>Desenvolvido por LDZ</small>
   </footer>
-
-  <audio id="alertSound" preload="auto">
-    <source src="alerta.mp3" type="audio/mpeg">
-  </audio>
 
 </body>
 </html>
