@@ -1,22 +1,11 @@
 document.addEventListener("DOMContentLoaded", () => {
 
   // ================= CONFIGURAÇÃO =================
-  const INTERVALO = 300; // segundos
-  const EXIBIR_PAINEL_INFO = false; // false = oculta status do tempo e alertas sem remover o código
   let LAT = -20.8113;
   let LON = -49.3758;
   let nomeCidadeAtual = "São José do Rio Preto-SP";
-  let restante = INTERVALO;
-  let alertaDisparado = false;
 
   // ================= ELEMENTOS =================
-  const cidadeAtualEl = document.getElementById("cidadeAtual");
-  const painelInfoEl = document.querySelector(".box");
-  const statusEl = document.getElementById("status");
-  const detalheEl = document.getElementById("detalhe");
-  const alertaEl = document.getElementById("alerta");
-  const contadorEl = document.getElementById("contador");
-  const ultimaAtualizacaoEl = document.getElementById("ultimaAtualizacao");
   const mapaRadarEl = document.getElementById("mapaRadar");
   const mapaLegendaEl = document.getElementById("mapaLegenda");
 
@@ -24,33 +13,12 @@ document.addEventListener("DOMContentLoaded", () => {
   const btnBuscar = document.getElementById("btnBuscar");
   const btnGPS = document.getElementById("btnGPS");
   const btnRefresh = document.getElementById("btnRefresh");
-  const audio = document.getElementById("alertSound");
   const previsao12hEl = document.getElementById("previsao12h");
-
-  function aplicarVisibilidadePainelInfo() {
-    if (!painelInfoEl) return;
-    painelInfoEl.style.display = EXIBIR_PAINEL_INFO ? "" : "none";
-  }
 
   // ================= EVENTOS =================
   btnBuscar.addEventListener("click", buscarCidade);
   btnGPS.addEventListener("click", usarGPS);
   btnRefresh.addEventListener("click", () => window.location.reload());
-
-  // ================= AUDIO =================
-  // Função de alerta sonoro desativada temporariamente, sem remover o código.
-  // let audioLiberado = false;
-
-  // document.addEventListener("click", () => {
-  //   if (!audioLiberado && audio) {
-  //     audio.play().then(() => {
-  //       audio.pause();
-  //       audio.currentTime = 0;
-  //       audioLiberado = true;
-  //       console.log("🔓 Som liberado");
-  //     }).catch(() => {});
-  //   }
-  // }, { once: true });
 
   // ================= FUNÇÕES =================
   const UF_POR_ESTADO = {
@@ -97,7 +65,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
   function mostrarCidade(nome) {
     nomeCidadeAtual = nome;
-    cidadeAtualEl.innerHTML = `📍 Cidade: <b>${nome}</b>`;
   }
 
   function atualizarMapa(nomeCidade = nomeCidadeAtual) {
@@ -128,13 +95,6 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     return formatarNomeCidade(resultado);
-  }
-
-  function definirStatus(prob, chuva) {
-    if (chuva > 0.5) return "🔴 Chuva forte ⛈️";
-    if (prob >= 40) return "🟠 Chuva se aproximando";
-    if (prob >= 20) return "🟡 Chuva possível";
-    return "🟢 Sem chuva";
   }
 
   function iconePorProbabilidade(prob) {
@@ -202,32 +162,10 @@ document.addEventListener("DOMContentLoaded", () => {
     }).join("");
   }
 
-  function renderizarAlerta(prob, chuva, temperatura, vento) {
-    const alertaAtivo = prob >= 40 || chuva > 0.5;
-
-    const blocoAlerta = alertaAtivo
-      ? `
-        <div class="alerta">
-          ⛈️ ALERTA DE CHUVA!<br>
-          Prob.: ${prob}% | Precip.: ${chuva.toFixed(2)} mm
-        </div>
-      `
-      : '<div class="sem-alerta">✅ Sem alerta de chuva no momento.</div>';
-
-    alertaEl.innerHTML = `
-      ${blocoAlerta}
-      <div class="info-clima">🌡️ Temperatura: <b>${temperatura.toFixed(1)}°C</b></div>
-      <div class="info-clima">💨 Vento: <b>${vento.toFixed(1)} km/h</b></div>
-    `;
-  }
-
   async function buscarCidade() {
     try {
       const nome = cidadeInput.value.trim();
       if (!nome) throw "Digite a cidade";
-
-      statusEl.innerText = "⏳ Buscando cidade...";
-      alertaEl.innerHTML = "";
 
       const r = await fetch(
         `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(nome)}&count=1&language=pt`
@@ -246,8 +184,7 @@ document.addEventListener("DOMContentLoaded", () => {
       atualizarMapa(nomeCidade);
       atualizarTudo();
     } catch (e) {
-      statusEl.innerText = "❌ " + e;
-      alertaEl.innerHTML = "";
+      console.error("Erro ao buscar cidade:", e);
     }
   }
 
@@ -258,13 +195,10 @@ document.addEventListener("DOMContentLoaded", () => {
   function carregarLocalizacaoAtual({ mostrarErro = false } = {}) {
     if (!navigator.geolocation) {
       if (mostrarErro) {
-        statusEl.innerText = "❌ Geolocalização não suportada";
+        console.warn("Geolocalização não suportada");
       }
       return;
     }
-
-    statusEl.innerText = "📍 Obtendo localização...";
-    alertaEl.innerHTML = "";
 
     navigator.geolocation.getCurrentPosition(async pos => {
       LAT = pos.coords.latitude;
@@ -284,7 +218,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }, erro => {
       console.warn("Não foi possível obter a localização automaticamente:", erro);
       if (mostrarErro) {
-        statusEl.innerText = "❌ Permissão de localização negada";
+        console.warn("Permissão de localização negada");
       }
     }, {
       enableHighAccuracy: false,
@@ -304,61 +238,9 @@ document.addEventListener("DOMContentLoaded", () => {
       const data = await r.json();
       renderizarPrevisao12h(data.hourly, data.timezone);
 
-      if (!EXIBIR_PAINEL_INFO) return;
-
-      const prob = Math.max(...data.hourly.precipitation_probability.slice(0, 4));
-      const chuva = Math.max(...data.hourly.precipitation.slice(0, 4));
-      const temperatura = data.hourly.temperature_2m[0];
-      const vento = data.hourly.wind_speed_10m[0];
-
-      statusEl.innerText = definirStatus(prob, chuva);
-      detalheEl.innerHTML = `
-        Probabilidade máx.: <b>${prob}%</b><br>
-        Precipitação: <b>${chuva.toFixed(2)} mm</b>
-      `;
-
-      dispararAlerta(prob, chuva);
-      renderizarAlerta(prob, chuva, temperatura, vento);
-
-      if (prob < 20 && chuva === 0) {
-        alertaDisparado = false;
-      }
-
-      const agora = new Date();
-      const horaFormatada = agora.toLocaleTimeString("pt-BR", {
-        hour: "2-digit",
-        minute: "2-digit"
-      });
-
-      ultimaAtualizacaoEl.innerText = `🕒 Última atualização: ${horaFormatada}`;
-      restante = INTERVALO;
-
     } catch (e) {
-      statusEl.innerText = "❌ Erro ao atualizar previsão";
-      alertaEl.innerHTML = "";
       console.error("Erro atualizarPrevisao:", e);
     }
-  }
-
-  function dispararAlerta(prob, chuva) {
-    if (alertaDisparado) return;
-
-    if (prob >= 40 || chuva > 0.5) {
-      alertaDisparado = true;
-
-      // if (audioLiberado && audio) {
-      //   audio.currentTime = 0;
-      //   audio.play().catch(() => {});
-      // }
-    }
-  }
-
-  function atualizarContador() {
-    const m = Math.floor(restante / 60);
-    const s = restante % 60;
-    contadorEl.innerText =
-      `🔄 Próxima atualização em ${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
-    if (restante > 0) restante--;
   }
 
   function atualizarTudo() {
@@ -367,17 +249,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // ================= INICIALIZAÇÃO =================
   mostrarCidade(nomeCidadeAtual);
-  aplicarVisibilidadePainelInfo();
   atualizarMapa(nomeCidadeAtual);
   atualizarTudo();
   carregarLocalizacaoAtual();
-  if (EXIBIR_PAINEL_INFO) {
-    atualizarContador();
-  }
-
-  if (EXIBIR_PAINEL_INFO) {
-    setInterval(atualizarPrevisao, INTERVALO * 1000);
-    setInterval(atualizarContador, 1000);
-  }
 
 });
