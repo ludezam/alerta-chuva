@@ -104,6 +104,12 @@ document.addEventListener("DOMContentLoaded", () => {
     return "☁️";
   }
 
+  function classeCardPorProbabilidade(prob) {
+    if (!Number.isFinite(prob) || prob < 40) return "";
+    if (prob < 60) return " previsao-card--chuva-moderada";
+    return " previsao-card--chuva-forte";
+  }
+
   function formatarVelocidadeVento(velocidade) {
     if (!Number.isFinite(velocidade)) return "-- km/h";
     return `${velocidade.toFixed(0)} km/h`;
@@ -147,8 +153,10 @@ document.addEventListener("DOMContentLoaded", () => {
     previsao12hEl.innerHTML = proximas12.map(item => {
       const horario = item.time.slice(11, 16);
 
+      const classeChuva = classeCardPorProbabilidade(item.prob);
+
       return `
-        <article class="previsao-card" role="listitem" aria-label="Previsão para ${horario}, vento ${formatarVelocidadeVento(item.windSpeed)} na direção ${formatarDirecaoVento(item.windDirection)}">
+        <article class="previsao-card${classeChuva}" role="listitem" aria-label="Previsão para ${horario}, vento ${formatarVelocidadeVento(item.windSpeed)} na direção ${formatarDirecaoVento(item.windDirection)}">
           <div class="hora">${horario}</div>
           <div class="icone-clima">${iconePorProbabilidade(item.prob)}</div>
           <div class="temperatura">${item.temp.toFixed(0)}°C</div>
