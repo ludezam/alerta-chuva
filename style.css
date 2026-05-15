@@ -134,6 +134,20 @@ small {
   display: grid;
   gap: 4px;
   justify-items: center;
+  box-shadow: 0 10px 24px rgba(8, 13, 20, 0.18);
+  transition: background 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.previsao-card--chuva-moderada {
+  background: linear-gradient(180deg, #4a4020 0%, #302a1c 100%);
+  border-color: rgba(245, 193, 82, 0.32);
+  box-shadow: 0 10px 24px rgba(245, 193, 82, 0.12);
+}
+
+.previsao-card--chuva-forte {
+  background: linear-gradient(180deg, #4a2430 0%, #321d27 100%);
+  border-color: rgba(238, 95, 111, 0.36);
+  box-shadow: 0 10px 24px rgba(238, 95, 111, 0.14);
 }
 
 .hora {
