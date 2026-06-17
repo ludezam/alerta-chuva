@@ -115,12 +115,9 @@ small {
 
 .previsao-scroll {
   display: grid;
-  grid-auto-flow: column;
-  grid-auto-columns: calc((100% - (3 * 10px)) / 4);
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
   gap: 10px;
-  overflow-x: auto;
-  scroll-snap-type: x mandatory;
-  -webkit-overflow-scrolling: touch;
+  overflow-x: hidden;
   padding-bottom: 4px;
 }
 
@@ -129,7 +126,6 @@ small {
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 12px;
   padding: 10px 8px;
-  scroll-snap-align: start;
   min-height: 148px;
   display: grid;
   gap: 4px;
@@ -188,18 +184,6 @@ small {
   font-size: 0.78rem;
   font-weight: 700;
   opacity: 0.9;
-}
-
-@media (max-width: 840px) {
-  .previsao-scroll {
-    grid-auto-columns: calc((100% - (2 * 10px)) / 3);
-  }
-}
-
-@media (max-width: 560px) {
-  .previsao-scroll {
-    grid-auto-columns: calc((100% - 10px) / 2);
-  }
 }
 
 @media (min-width: 700px) {
