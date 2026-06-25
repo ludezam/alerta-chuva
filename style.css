@@ -269,6 +269,7 @@ small {
 .previsao-card--chuva-fraca,
 .previsao-card--chuva-moderada,
 .previsao-card--chuva-forte,
+.previsao-card--ameno,
 .previsao-card--sol,
 .previsao-card--calor-extremo {
   position: relative;
@@ -298,6 +299,30 @@ small {
     linear-gradient(145deg, #243046 0%, #172133 48%, #0c1424 100%);
   border-color: rgba(142, 197, 255, 0.52);
   box-shadow: 0 12px 28px rgba(67, 129, 218, 0.22);
+}
+
+.previsao-card--ameno {
+  background:
+    radial-gradient(circle at 20% 18%, rgba(255, 255, 255, 0.78) 0 9px, transparent 10px),
+    radial-gradient(circle at 31% 19%, rgba(255, 255, 255, 0.62) 0 13px, transparent 14px),
+    radial-gradient(circle at 42% 19%, rgba(255, 255, 255, 0.72) 0 10px, transparent 11px),
+    linear-gradient(180deg, transparent 0 66%, rgba(68, 143, 96, 0.36) 67% 100%),
+    linear-gradient(145deg, #6fc7ee 0%, #59b8de 48%, #3f9dc8 100%);
+  border-color: rgba(177, 236, 214, 0.56);
+  box-shadow: 0 12px 28px rgba(91, 184, 190, 0.2);
+}
+
+.previsao-card--ameno::before {
+  content: "";
+  position: absolute;
+  inset: auto 0 0;
+  height: 48px;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse at 18% 100%, rgba(107, 190, 120, 0.72) 0 22px, transparent 23px),
+    radial-gradient(ellipse at 46% 100%, rgba(91, 170, 109, 0.58) 0 26px, transparent 27px),
+    radial-gradient(ellipse at 78% 100%, rgba(123, 204, 134, 0.62) 0 24px, transparent 25px);
+  opacity: 0.86;
 }
 
 .previsao-card--sol {
@@ -341,6 +366,7 @@ small {
 .previsao-card--chuva-fraca > *:not(.ilustracao-chuva),
 .previsao-card--chuva-moderada > *:not(.ilustracao-chuva),
 .previsao-card--chuva-forte > *:not(.ilustracao-chuva),
+.previsao-card--ameno > *:not(.ilustracao-ameno),
 .previsao-card--sol > *:not(.ilustracao-sol),
 .previsao-card--calor-extremo > *:not(.ilustracao-calor) {
   position: relative;
@@ -348,6 +374,7 @@ small {
 }
 
 .ilustracao-chuva,
+.ilustracao-ameno,
 .ilustracao-sol,
 .ilustracao-calor {
   position: absolute;
@@ -371,6 +398,45 @@ small {
 .ilustracao-chuva span:nth-child(1) { right: 10px; opacity: 0.95; }
 .ilustracao-chuva span:nth-child(2) { right: 28px; top: 14px; opacity: 0.7; }
 .ilustracao-chuva span:nth-child(3) { right: 44px; top: 2px; opacity: 0.55; }
+
+.ilustracao-ameno span {
+  position: absolute;
+  display: block;
+}
+
+.ilustracao-ameno span:nth-child(1) {
+  top: 2px;
+  right: 0;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: #ffe47a;
+  box-shadow: 0 0 16px rgba(255, 228, 122, 0.58);
+}
+
+.ilustracao-ameno span:nth-child(2) {
+  right: 13px;
+  bottom: 10px;
+  width: 42px;
+  height: 18px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.84);
+  box-shadow:
+    -12px 2px 0 rgba(255, 255, 255, 0.72),
+    10px 2px 0 rgba(255, 255, 255, 0.68),
+    0 0 10px rgba(211, 244, 255, 0.36);
+}
+
+.ilustracao-ameno span:nth-child(3) {
+  left: 4px;
+  bottom: 0;
+  width: 18px;
+  height: 24px;
+  border-radius: 18px 0 18px 0;
+  background: #79d18a;
+  transform: rotate(-18deg);
+  box-shadow: 12px -2px 0 rgba(97, 190, 119, 0.84);
+}
 
 .ilustracao-sol span,
 .ilustracao-calor span:first-child {

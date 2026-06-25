@@ -106,6 +106,7 @@ document.addEventListener("DOMContentLoaded", () => {
     if (Number.isFinite(temp) && temp < 15) return "❄️";
     if (Number.isFinite(temp) && temp >= 35) return "🔥";
     if (Number.isFinite(temp) && temp > 28 && temp <= 34) return "☀️";
+    if (Number.isFinite(temp) && temp >= 16 && temp <= 27) return "🌤️";
 
     return "☁️";
   }
@@ -120,6 +121,7 @@ document.addEventListener("DOMContentLoaded", () => {
     if (Number.isFinite(temp) && temp < 15) return " previsao-card--frio";
     if (Number.isFinite(temp) && temp >= 35) return " previsao-card--calor-extremo";
     if (Number.isFinite(temp) && temp > 28 && temp <= 34) return " previsao-card--sol";
+    if (Number.isFinite(temp) && temp >= 16 && temp <= 27) return " previsao-card--ameno";
 
     return "";
   }
@@ -139,6 +141,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
     if (Number.isFinite(temp) && temp > 28 && temp <= 34) {
       return '<div class="ilustracao-sol" aria-hidden="true"><span>☀</span></div>';
+    }
+
+    if (Number.isFinite(temp) && temp >= 16 && temp <= 27) {
+      return '<div class="ilustracao-ameno" aria-hidden="true"><span></span><span></span><span></span></div>';
     }
 
     return "";
