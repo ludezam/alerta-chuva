@@ -96,12 +96,23 @@ document.addEventListener("DOMContentLoaded", () => {
     return (Number.isFinite(precip) && precip > 0) || (Number.isFinite(prob) && prob >= 40);
   }
 
-  function iconePorClima({ prob, precip, temp }) {
+  function grauNebulosidade(cloudCover) {
+    if (!Number.isFinite(cloudCover)) return null;
+    if (cloudCover >= 70) return "muito";
+    if (cloudCover >= 35) return "pouco";
+    return null;
+  }
+
+  function iconePorClima({ prob, precip, temp, cloudCover }) {
     if (temChuvaPrevista(prob, precip)) {
       if (Number.isFinite(precip) && precip >= 4) return "⛈️";
       if (Number.isFinite(precip) && precip >= 1) return "🌧️";
       return "🌦️";
     }
+
+    const nebulosidade = grauNebulosidade(cloudCover);
+    if (nebulosidade === "muito") return "☁️";
+    if (nebulosidade === "pouco") return "🌥️";
 
     if (Number.isFinite(temp) && temp < 15) return "❄️";
     if (Number.isFinite(temp) && temp >= 35) return "🔥";
@@ -111,12 +122,16 @@ document.addEventListener("DOMContentLoaded", () => {
     return "☁️";
   }
 
-  function classeCardPorClima({ prob, precip, temp }) {
+  function classeCardPorClima({ prob, precip, temp, cloudCover }) {
     if (temChuvaPrevista(prob, precip)) {
       if (Number.isFinite(precip) && precip >= 4) return " previsao-card--chuva-forte";
       if (Number.isFinite(precip) && precip >= 1) return " previsao-card--chuva-moderada";
       return " previsao-card--chuva-fraca";
     }
+
+    const nebulosidade = grauNebulosidade(cloudCover);
+    if (nebulosidade === "muito") return " previsao-card--muito-nublado";
+    if (nebulosidade === "pouco") return " previsao-card--pouco-nublado";
 
     if (Number.isFinite(temp) && temp < 15) return " previsao-card--frio";
     if (Number.isFinite(temp) && temp >= 35) return " previsao-card--calor-extremo";
@@ -126,9 +141,14 @@ document.addEventListener("DOMContentLoaded", () => {
     return "";
   }
 
-  function ilustracaoPorClima({ prob, precip, temp }) {
+  function ilustracaoPorClima({ prob, precip, temp, cloudCover }) {
     if (temChuvaPrevista(prob, precip)) {
       return '<div class="ilustracao-chuva" aria-hidden="true"><span></span><span></span><span></span></div>';
+    }
+
+    const nebulosidade = grauNebulosidade(cloudCover);
+    if (nebulosidade) {
+      return `<div class="ilustracao-nublado ilustracao-nublado--${nebulosidade}" aria-hidden="true"><span></span><span></span><span></span></div>`;
     }
 
     if (Number.isFinite(temp) && temp < 15) {
@@ -187,13 +207,14 @@ document.addEventListener("DOMContentLoaded", () => {
       precip: hourly.precipitation[indiceInicial + i],
       prob: hourly.precipitation_probability[indiceInicial + i],
       windSpeed: hourly.wind_speed_10m[indiceInicial + i],
-      windDirection: hourly.wind_direction_10m[indiceInicial + i]
+      windDirection: hourly.wind_direction_10m[indiceInicial + i],
+      cloudCover: hourly.cloud_cover?.[indiceInicial + i]
     }));
 
     previsao12hEl.innerHTML = proximas12.map(item => {
       const horario = item.time.slice(11, 16);
 
-      const clima = { prob: item.prob, precip: item.precip, temp: item.temp };
+      const clima = { prob: item.prob, precip: item.precip, temp: item.temp, cloudCover: item.cloudCover };
       const classeClima = classeCardPorClima(clima);
 
       return `
@@ -280,7 +301,7 @@ document.addEventListener("DOMContentLoaded", () => {
   async function atualizarPrevisao() {
     try {
       const r = await fetch(
-        `https://api.open-meteo.com/v1/forecast?latitude=${LAT}&longitude=${LON}&hourly=precipitation_probability,precipitation,temperature_2m,wind_speed_10m,wind_direction_10m&timezone=auto`
+        `https://api.open-meteo.com/v1/forecast?latitude=${LAT}&longitude=${LON}&hourly=precipitation_probability,precipitation,temperature_2m,cloud_cover,wind_speed_10m,wind_direction_10m&timezone=auto`
       );
 
       if (!r.ok) throw "Erro na previsão";
