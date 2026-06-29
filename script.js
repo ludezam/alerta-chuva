@@ -1,363 +1,311 @@
 document.addEventListener("DOMContentLoaded", () => {
 
-  // ================= CONFIGURAÇÃO =================
-  let LAT = -20.8113;
-  let LON = -49.3758;
-  let nomeCidadeAtual = "São José do Rio Preto-SP";
+/* ================= ESTADO ================= */
+let LAT = null;
+let LON = null;
 
-  // ================= ELEMENTOS =================
-  const mapaRadarEl = document.getElementById("mapaRadar");
+let estadoAtual = {
+  intensidade: 0,
+  prob: 0,
+  chuvaForte: false
+};
 
-  const cidadeInput = document.getElementById("cidade");
-  const btnBuscar = document.getElementById("btnBuscar");
-  const btnGPS = document.getElementById("btnGPS");
-  const btnRefresh = document.getElementById("btnRefresh");
-  const previsao12hEl = document.getElementById("previsao12h");
+let estrelasGeradas = false;
 
-  // ================= EVENTOS =================
-  btnBuscar.addEventListener("click", buscarCidade);
-  btnGPS.addEventListener("click", usarGPS);
-  btnRefresh.addEventListener("click", () => window.location.reload());
+/* ================= UTIL ================= */
+function el(id) {
+  return document.getElementById(id);
+}
 
-  // ================= FUNÇÕES =================
-  const UF_POR_ESTADO = {
-    Acre: "AC",
-    Alagoas: "AL",
-    Amapá: "AP",
-    Amazonas: "AM",
-    Bahia: "BA",
-    Ceará: "CE",
-    "Distrito Federal": "DF",
-    "Espírito Santo": "ES",
-    Goiás: "GO",
-    Maranhão: "MA",
-    "Mato Grosso": "MT",
-    "Mato Grosso do Sul": "MS",
-    "Minas Gerais": "MG",
-    Pará: "PA",
-    Paraíba: "PB",
-    Paraná: "PR",
-    Pernambuco: "PE",
-    Piauí: "PI",
-    "Rio de Janeiro": "RJ",
-    "Rio Grande do Norte": "RN",
-    "Rio Grande do Sul": "RS",
-    Rondônia: "RO",
-    Roraima: "RR",
-    "Santa Catarina": "SC",
-    "São Paulo": "SP",
-    Sergipe: "SE",
-    Tocantins: "TO"
-  };
+/* ================= GEOLOCALIZAÇÃO ================= */
+function initLocalizacao() {
 
-  function formatarNomeCidade({ name, admin1, country_code }) {
-    if (!name) return "Local atual";
+  el("cidadeAtual").textContent = "Buscando localização...";
 
-    if (country_code === "BR" && admin1) {
-      const uf = UF_POR_ESTADO[admin1] || admin1;
-      return `${name}-${uf}`;
-    }
-
-    if (admin1) return `${name}-${admin1}`;
-    return name;
+  if (!navigator.geolocation) {
+    el("cidadeAtual").textContent = "GPS não suportado";
+    return;
   }
 
-  function mostrarCidade(nome) {
-    nomeCidadeAtual = nome;
-  }
-
-  function atualizarMapa(nomeCidade = nomeCidadeAtual) {
-    if (!mapaRadarEl) return;
-
-    mapaRadarEl.src = `https://www.rainviewer.com/map.html?loc=${LAT},${LON},10&oCS=1&c=3&o=83&lm=1&layer=radar&sm=1&sn=1`;
-    mapaRadarEl.title = `Mapa radar de ${nomeCidade}`;
-  }
-
-  async function obterNomeCidadePorCoordenadas(latitude, longitude) {
-    const r = await fetch(
-      `https://geocoding-api.open-meteo.com/v1/reverse?latitude=${latitude}&longitude=${longitude}&language=pt`
-    );
-
-    if (!r.ok) {
-      throw new Error("Falha ao obter cidade");
-    }
-
-    const data = await r.json();
-    const resultado = data.results?.[0];
-
-    if (!resultado?.name) {
-      throw new Error("Cidade não encontrada para as coordenadas");
-    }
-
-    return formatarNomeCidade(resultado);
-  }
-
-  function temChuvaPrevista(prob, precip) {
-    return (Number.isFinite(precip) && precip > 0) || (Number.isFinite(prob) && prob >= 40);
-  }
-
-  function grauNebulosidade(cloudCover) {
-    if (!Number.isFinite(cloudCover)) return null;
-    if (cloudCover >= 70) return "muito";
-    if (cloudCover >= 35) return "pouco";
-    return null;
-  }
-
-  function iconePorClima({ prob, precip, temp, cloudCover }) {
-    if (Number.isFinite(temp) && temp < 15) return "❄️";
-
-    if (temChuvaPrevista(prob, precip)) {
-      if (Number.isFinite(precip) && precip >= 4) return "⛈️";
-      if (Number.isFinite(precip) && precip >= 1) return "🌧️";
-      return "🌦️";
-    }
-
-    const nebulosidade = grauNebulosidade(cloudCover);
-    if (nebulosidade === "muito") return "☁️";
-    if (nebulosidade === "pouco") return "🌥️";
-
-    if (Number.isFinite(temp) && temp >= 35) return "🔥";
-    if (Number.isFinite(temp) && temp > 28 && temp <= 34) return "☀️";
-    if (Number.isFinite(temp) && temp >= 16 && temp <= 28) return "🌤️";
-
-    return "☁️";
-  }
-
-  function periodoLuzDoDia(time) {
-    const hora = Number(time?.slice(11, 13));
-
-    if (!Number.isFinite(hora)) return null;
-    if (hora >= 5 && hora < 7) return "amanhecer";
-    if (hora >= 17 && hora < 19) return "anoitecer";
-    if (hora >= 19 || hora < 5) return "noite";
-
-    return null;
-  }
-
-  function classeCardPorPeriodo(periodo) {
-    return periodo ? ` previsao-card--${periodo}` : "";
-  }
-
-  function ilustracaoPorPeriodo(periodo) {
-    if (periodo === "amanhecer") {
-      return '<div class="ilustracao-periodo ilustracao-periodo--amanhecer" aria-hidden="true"><span></span><span></span><span></span></div>';
-    }
-
-    if (periodo === "anoitecer") {
-      return '<div class="ilustracao-periodo ilustracao-periodo--anoitecer" aria-hidden="true"><span></span><span></span><span></span></div>';
-    }
-
-    if (periodo === "noite") {
-      return '<div class="ilustracao-periodo ilustracao-periodo--noite" aria-hidden="true"><span></span><span></span><span></span><span></span></div>';
-    }
-
-    return "";
-  }
-
-  function classeCardPorClima({ prob, precip, temp, cloudCover }) {
-    if (Number.isFinite(temp) && temp < 15) return " previsao-card--frio";
-
-    if (temChuvaPrevista(prob, precip)) {
-      if (Number.isFinite(precip) && precip >= 4) return " previsao-card--chuva-forte";
-      if (Number.isFinite(precip) && precip >= 1) return " previsao-card--chuva-moderada";
-      return " previsao-card--chuva-fraca";
-    }
-
-    const nebulosidade = grauNebulosidade(cloudCover);
-    if (nebulosidade === "muito") return " previsao-card--muito-nublado";
-    if (nebulosidade === "pouco") return " previsao-card--pouco-nublado";
-
-    if (Number.isFinite(temp) && temp >= 35) return " previsao-card--calor-extremo";
-    if (Number.isFinite(temp) && temp > 28 && temp <= 34) return " previsao-card--sol";
-    if (Number.isFinite(temp) && temp >= 16 && temp <= 28) return " previsao-card--ameno";
-
-    return "";
-  }
-
-  function ilustracaoPorClima({ prob, precip, temp, cloudCover }) {
-    if (Number.isFinite(temp) && temp < 15) {
-      return '<div class="ilustracao-frio" aria-hidden="true"><span>❄</span><span>✦</span><span>❅</span></div>';
-    }
-
-    if (temChuvaPrevista(prob, precip)) {
-      return '<div class="ilustracao-chuva" aria-hidden="true"><span></span><span></span><span></span></div>';
-    }
-
-    const nebulosidade = grauNebulosidade(cloudCover);
-    if (nebulosidade) {
-      return `<div class="ilustracao-nublado ilustracao-nublado--${nebulosidade}" aria-hidden="true"><span></span><span></span><span></span></div>`;
-    }
-
-    if (Number.isFinite(temp) && temp >= 35) {
-      return '<div class="ilustracao-calor" aria-hidden="true"><span>🔥</span><span></span></div>';
-    }
-
-    if (Number.isFinite(temp) && temp > 28 && temp <= 34) {
-      return '<div class="ilustracao-sol" aria-hidden="true"><span>☀</span></div>';
-    }
-
-    if (Number.isFinite(temp) && temp >= 16 && temp <= 28) {
-      return '<div class="ilustracao-ameno" aria-hidden="true"><span></span><span></span><span></span></div>';
-    }
-
-    return "";
-  }
-
-  function formatarVelocidadeVento(velocidade) {
-    if (!Number.isFinite(velocidade)) return "-- km/h";
-    return `${velocidade.toFixed(0)} km/h`;
-  }
-
-  function formatarDirecaoVento(direcao) {
-    if (!Number.isFinite(direcao)) return "direção indisponível";
-    return `${Math.round(direcao)}°`;
-  }
-
-  function obterChaveHoraAtual(timeZone = "America/Sao_Paulo") {
-    const agora = new Date();
-    const partes = new Intl.DateTimeFormat("sv-SE", {
-      timeZone,
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit",
-      hour: "2-digit",
-      hour12: false
-    }).formatToParts(agora);
-
-    const mapa = Object.fromEntries(partes.map(({ type, value }) => [type, value]));
-    return `${mapa.year}-${mapa.month}-${mapa.day}T${mapa.hour}:00`;
-  }
-
-  function renderizarPrevisao12h(hourly, timeZone) {
-    if (!previsao12hEl || !hourly?.time) return;
-
-    const chaveHoraAtual = obterChaveHoraAtual(timeZone);
-    const indiceInicial = Math.max(hourly.time.findIndex(time => time >= chaveHoraAtual), 0);
-
-    const proximas12 = hourly.time.slice(indiceInicial, indiceInicial + 12).map((time, i) => ({
-      time,
-      temp: hourly.temperature_2m[indiceInicial + i],
-      precip: hourly.precipitation[indiceInicial + i],
-      prob: hourly.precipitation_probability[indiceInicial + i],
-      windSpeed: hourly.wind_speed_10m[indiceInicial + i],
-      windDirection: hourly.wind_direction_10m[indiceInicial + i],
-      cloudCover: hourly.cloud_cover?.[indiceInicial + i]
-    }));
-
-    previsao12hEl.innerHTML = proximas12.map(item => {
-      const horario = item.time.slice(11, 16);
-
-      const clima = { prob: item.prob, precip: item.precip, temp: item.temp, cloudCover: item.cloudCover };
-      const periodo = periodoLuzDoDia(item.time);
-      const classeClima = classeCardPorClima(clima);
-      const classePeriodo = classeCardPorPeriodo(periodo);
-
-      return `
-        <article class="previsao-card${classeClima}${classePeriodo}" role="listitem" aria-label="Previsão para ${horario}, temperatura ${item.temp.toFixed(0)}°C, vento ${formatarVelocidadeVento(item.windSpeed)} na direção ${formatarDirecaoVento(item.windDirection)}">
-          ${ilustracaoPorClima(clima)}
-          ${ilustracaoPorPeriodo(periodo)}
-          <div class="hora">${horario}</div>
-          <div class="icone-clima">${iconePorClima(clima)}</div>
-          <div class="temperatura">${item.temp.toFixed(0)}°C</div>
-          <div class="chuva">${item.prob}% · ${item.precip.toFixed(1)} mm</div>
-          <div class="vento-card" aria-label="Vento ${formatarVelocidadeVento(item.windSpeed)} na direção ${formatarDirecaoVento(item.windDirection)}">
-            <span class="seta-vento" style="--direcao-vento: ${Number.isFinite(item.windDirection) ? item.windDirection : 0}deg" aria-hidden="true">↑</span>
-            <span class="velocidade-vento">${formatarVelocidadeVento(item.windSpeed)}</span>
-          </div>
-        </article>
-      `;
-    }).join("");
-  }
-
-  async function buscarCidade() {
-    try {
-      const nome = cidadeInput.value.trim();
-      if (!nome) throw "Digite a cidade";
-
-      const r = await fetch(
-        `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(nome)}&count=1&language=pt`
-      );
-
-      if (!r.ok) throw "Erro ao buscar cidade";
-
-      const data = await r.json();
-      if (!data.results) throw "Cidade não encontrada";
-
-      LAT = data.results[0].latitude;
-      LON = data.results[0].longitude;
-
-      const nomeCidade = formatarNomeCidade(data.results[0]);
-      mostrarCidade(nomeCidade);
-      atualizarMapa(nomeCidade);
-      atualizarTudo();
-    } catch (e) {
-      console.error("Erro ao buscar cidade:", e);
-    }
-  }
-
-  function usarGPS() {
-    carregarLocalizacaoAtual({ mostrarErro: true });
-  }
-
-  function carregarLocalizacaoAtual({ mostrarErro = false } = {}) {
-    if (!navigator.geolocation) {
-      if (mostrarErro) {
-        console.warn("Geolocalização não suportada");
-      }
-      return;
-    }
-
-    navigator.geolocation.getCurrentPosition(async pos => {
+  navigator.geolocation.getCurrentPosition(
+    pos => {
       LAT = pos.coords.latitude;
       LON = pos.coords.longitude;
 
-      let nomeCidade = nomeCidadeAtual;
+      el("cidadeAtual").textContent = "Local atual";
+      atualizar();
+    },
+    () => {
+      el("cidadeAtual").textContent = "Permissão negada";
+    },
+    { enableHighAccuracy: true, timeout: 8000 }
+  );
+}
 
-      try {
-        nomeCidade = await obterNomeCidadePorCoordenadas(LAT, LON);
-      } catch (erro) {
-        console.error("Erro ao resolver cidade da localização:", erro);
-      }
+/* ================= CICLO SOL/LUA ================= */
+function atualizarCicloSolar() {
 
-      mostrarCidade(nomeCidade);
-      atualizarMapa(nomeCidade);
-      atualizarTudo();
-    }, erro => {
-      console.warn("Não foi possível obter a localização automaticamente:", erro);
-      if (mostrarErro) {
-        console.warn("Permissão de localização negada");
-      }
-    }, {
-      enableHighAccuracy: false,
-      maximumAge: 10 * 60 * 1000,
-      timeout: 10000
-    });
+  const sun = document.querySelector(".sun");
+  const moon = document.querySelector(".moon");
+  const stars = el("stars");
+
+  const agora = new Date();
+  const hora = agora.getHours() + agora.getMinutes() / 60;
+
+  if (hora >= 6 && hora <= 18) {
+
+    const p = (hora - 6) / 12;
+
+    sun.style.left = (10 + p * 80) + "vw";
+    sun.style.top = (70 - Math.sin(p * Math.PI) * 60) + "vh";
+    sun.style.opacity = 1;
+    sun.style.filter = `brightness(${0.6 + p * 0.6})`;
+
+    moon.style.opacity = 0;
+    stars.style.opacity = 0;
+    estrelasGeradas = false;
+
+  } else {
+
+    let h = hora < 6 ? hora + 24 : hora;
+    const p = (h - 18) / 12;
+
+    moon.style.left = (10 + p * 80) + "vw";
+    moon.style.top = (70 - Math.sin(p * Math.PI) * 60) + "vh";
+    moon.style.opacity = 0.5 + Math.sin(p * Math.PI) * 0.3;
+
+    sun.style.opacity = 0;
+
+    if (!estrelasGeradas) {
+      gerarEstrelas();
+      estrelasGeradas = true;
+    }
+
+    stars.style.opacity = estadoAtual.chuvaForte ? 0.3 : 1;
+  }
+}
+
+/* ================= ESTRELAS ================= */
+function gerarEstrelas(qtd = 80) {
+
+  const layer = el("stars");
+  layer.innerHTML = "";
+
+  for (let i = 0; i < qtd; i++) {
+    const s = document.createElement("div");
+    s.className = "star";
+
+    s.style.left = Math.random() * 100 + "vw";
+    s.style.top = Math.random() * 100 + "vh";
+
+    const size = Math.random() * 2 + 1;
+    s.style.width = size + "px";
+    s.style.height = size + "px";
+
+    s.style.animationDuration = (1 + Math.random() * 2) + "s";
+
+    layer.appendChild(s);
+  }
+}
+
+/* ================= CHUVA ================= */
+function startRain(intensidade = 60) {
+
+  const rain = el("rain");
+  rain.innerHTML = "";
+
+  for (let i = 0; i < intensidade; i++) {
+
+    const drop = document.createElement("div");
+    drop.className = "drop";
+
+    drop.style.left = Math.random() * 100 + "vw";
+    drop.style.animationDuration = (0.4 + Math.random()) + "s";
+
+    rain.appendChild(drop);
+  }
+}
+
+function stopRain() {
+  el("rain").innerHTML = "";
+}
+
+/* ================= ÍCONES DINÂMICOS ================= */
+function getIcon(codigo, prob) {
+
+  if (codigo === 0) return "☀️";
+  if ([1, 2, 3].includes(codigo)) return "🌤️";
+  if ([45, 48].includes(codigo)) return "🌫️";
+  if ([51, 53, 55].includes(codigo)) return "🌦️";
+  if ([61, 63, 65].includes(codigo)) return "🌧️";
+  if ([71, 73, 75].includes(codigo)) return "❄️";
+  if ([95, 96, 99].includes(codigo)) return "⛈️";
+
+  if (prob > 70) return "🌧️";
+
+  return "🌤️";
+}
+
+/* ================= API ================= */
+async function atualizar() {
+
+  if (LAT === null || LON === null) return;
+
+  try {
+
+    const r = await fetch(
+      `https://api.open-meteo.com/v1/forecast?latitude=${LAT}&longitude=${LON}&hourly=temperature_2m,precipitation_probability,precipitation,weathercode&current=temperature_2m,apparent_temperature,precipitation,precipitation_probability,wind_speed_10m,relative_humidity_2m&timezone=auto`
+    );
+
+    const d = await r.json();
+
+    if (!d.current || !d.hourly) return;
+
+    const c = d.current;
+
+    estadoAtual.intensidade = c.precipitation || 0;
+    estadoAtual.prob = c.precipitation_probability || 0;
+    estadoAtual.chuvaForte = c.precipitation > 3;
+
+    atualizarUI(c);
+    atualizarVisual();
+    atualizarDescricao(d.hourly);
+    atualizarMapa();
+    renderizar12h(d.hourly);
+
+  } catch (e) {
+    console.error("Erro ao atualizar clima:", e);
+  }
+}
+
+/* ================= UI ================= */
+function atualizarUI(d) {
+  el("tempAtual").textContent = Math.round(d.temperature_2m || 0) + "°";
+  el("sensacaoAtual").textContent = Math.round(d.apparent_temperature || 0) + "°";
+  el("umidadeAtual").textContent = (d.relative_humidity_2m || 0) + "%";
+  el("ventoAtual").textContent = Math.round(d.wind_speed_10m || 0) + " km/h";
+}
+
+/* ================= VISUAL ================= */
+function atualizarVisual() {
+
+  if (estadoAtual.intensidade > 0.5) {
+    startRain(Math.min(estadoAtual.intensidade * 80, 120));
+  } else {
+    stopRain();
   }
 
-  async function atualizarPrevisao() {
-    try {
-      const r = await fetch(
-        `https://api.open-meteo.com/v1/forecast?latitude=${LAT}&longitude=${LON}&hourly=precipitation_probability,precipitation,temperature_2m,cloud_cover,wind_speed_10m,wind_direction_10m&timezone=auto`
-      );
+  if (estadoAtual.chuvaForte) {
+    document.body.style.filter = "brightness(0.85)";
+    el("statusChuva").textContent = "🔴 Chuva forte";
+  } else if (estadoAtual.prob > 60) {
+    el("statusChuva").textContent = "🟡 Chuva chegando";
+  } else {
+    document.body.style.filter = "brightness(1)";
+    el("statusChuva").textContent = "🟢 Tempo firme";
+  }
+}
 
-      if (!r.ok) throw "Erro na previsão";
+/* ================= DESCRIÇÃO ================= */
+function atualizarDescricao(h) {
 
-      const data = await r.json();
-      renderizarPrevisao12h(data.hourly, data.timezone);
-
-    } catch (e) {
-      console.error("Erro atualizarPrevisao:", e);
+  for (let i = 0; i < 6; i++) {
+    if ((h.precipitation_probability[i] || 0) > 60) {
+      el("descricaoAtual").textContent = `🌧️ Chuva em ${i + 1}h`;
+      return;
     }
   }
 
-  function atualizarTudo() {
-    atualizarPrevisao();
-  }
+  el("descricaoAtual").textContent = "Sem chuva nas próximas horas";
+}
 
-  // ================= INICIALIZAÇÃO =================
-  mostrarCidade(nomeCidadeAtual);
-  atualizarMapa(nomeCidadeAtual);
-  atualizarTudo();
-  carregarLocalizacaoAtual();
+/* ================= PREVISÃO 12H ================= */
+function renderizar12h(h) {
+
+  const container = el("previsao12h");
+
+  let agora = new Date();
+  let start = h.time.findIndex(t => new Date(t) > agora);
+
+  if (start === -1) start = 0;
+
+  const html = h.time.slice(start, start + 12).map((t, i) => {
+
+    const temp = h.temperature_2m[start + i] ?? "--";
+    const prob = h.precipitation_probability[start + i] ?? "--";
+    const codigo = h.weathercode[start + i];
+
+    const icone = getIcon(codigo, prob);
+
+    return `
+      <div class="previsao-card">
+        <div class="hora">${t.slice(11,16)}</div>
+        <div>${icone}</div>
+        <div class="temp">${Math.round(temp)}°</div>
+        <div>${prob}% chuva</div>
+      </div>
+    `;
+  }).join("");
+
+  container.innerHTML = html;
+}
+
+/* ================= MAPA ================= */
+function atualizarMapa() {
+  el("mapaRadar").src =
+    `https://www.rainviewer.com/map.html?loc=${LAT},${LON},10&layer=radar&tm=${Date.now()}`;
+}
+
+/* ================= BUSCA ================= */
+async function buscarCidade() {
+
+  const nome = el("cidade").value;
+  if (!nome) return;
+
+  const r = await fetch(
+    `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(nome)}&count=1`
+  );
+
+  const d = await r.json();
+
+  if (!d.results?.length) return;
+
+  LAT = d.results[0].latitude;
+  LON = d.results[0].longitude;
+
+  el("cidadeAtual").textContent = d.results[0].name;
+
+  atualizar();
+}
+
+/* ================= GPS ================= */
+function gps() {
+
+  navigator.geolocation.getCurrentPosition(p => {
+
+    LAT = p.coords.latitude;
+    LON = p.coords.longitude;
+
+    el("cidadeAtual").textContent = "Local atual";
+    atualizar();
+
+  });
+}
+
+/* ================= EVENTOS ================= */
+el("btnBuscar").onclick = buscarCidade;
+el("btnGPS").onclick = gps;
+el("btnRefresh").onclick = atualizar;
+
+/* ================= LOOP ================= */
+setInterval(() => {
+  if (LAT !== null) atualizar();
+}, 300000);
+
+setInterval(atualizarCicloSolar, 60000);
+
+/* ================= INIT ================= */
+initLocalizacao();
+atualizarCicloSolar();
 
 });
