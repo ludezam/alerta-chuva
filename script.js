@@ -253,15 +253,28 @@ function gerarEstrelas() {
 function atualizarEstrelas() {
     if (!estrelasCriadas)
         gerarEstrelas();
-    const hora = obterHoraCidade().getHours();
     const stars = $("stars");
+    const now = obterHoraCidade().getTime();
+    const sunrise = new Date(climaAtual.sunrise).getTime();
+    const sunset = new Date(climaAtual.sunset).getTime();
     const cloud = climaAtual.cloudCover / 100;
-    if (hora >= 19 || hora <= 5) {
-        stars.style.opacity = Math.max(0,1 - cloud);
+    const transicao = 45 * 60 * 1000;
+
+    let opacity = 0;
+    if (now < sunrise - transicao) {
+        opacity = 1;
     }
-    else {
-        stars.style.opacity = 0;
+    else if (now < sunrise) {
+        opacity = 1 - ((now - (sunrise - transicao)) / transicao);
     }
+    else if (now > sunset + transicao) {
+        opacity = 1;
+    }
+    else if (now > sunset) {
+        opacity = (now - sunset)/ transicao;
+    }
+    opacity *= (1 - cloud);
+    stars.style.opacity = opacity;
 }
 
 /* =====================================================
